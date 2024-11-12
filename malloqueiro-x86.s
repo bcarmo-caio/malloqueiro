@@ -73,6 +73,7 @@ fmt_initial_brk_addr: .string "Inital brk memory address: 0xZZZZZZZZ\n\n"
 fmt_new_brk: .string "New brk at 0xZZZZZZZZ\n"
 fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n"
 fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9,23,41,78 (total 81)
+fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" #45, 36
 
 
 # +--------------------+
@@ -367,6 +368,32 @@ bytes2ascii:
     orl   %eax, %ecx
 
     ret
+
+malloca_free: # 1 argument, no local var, no return value. void f(void *ptr)
+    pushad                     # | we are comming from C, push all registers
+    movl %esp, %ebp            # | init frame pointer
+
+    movl 28(%ebp), %ebx        # get pointer argument
+    subl (metadata_size), %ebx # lower memory address to 'chunk in use' place
+    movb (%ebx), %al           # get if chunk is free or not
+    cmpb $0, %al               # |
+    je already_freed           # | if already freed, print err and abort
+
+    movb $0, (%ebx)            # set chunk as free
+
+    popad
+    ret
+
+  already_freed:
+    movl 28(%ebp), %edx                        # get pointer argument
+    call bytes2ascii                           # |
+    movl $fmt_already_freed, %edx              # |
+    addl $36, %edx                             # |
+    insert_ascii_into_string2 %edx, %ecx, %ebx # | format string
+    print $fmt_already_freed, $45              # print error message
+    movl $1, %eax                              # |
+    movl $1, %ebx                              # |
+    int $0x80                                  # | abort program
 
 malloca_init: # no arguments, no local vars, no return value
     cmpl $0, (initial_brk)   # |
