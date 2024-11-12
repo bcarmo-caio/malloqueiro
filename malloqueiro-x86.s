@@ -122,8 +122,8 @@ fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadat
 .endm
 
 .macro get_cur_brk
-  mov $45, %eax   # 45 is brk syscall
-  mov $0, %ebx    # 0 means current brk
+  movl $45, %eax   # 45 is brk syscall
+  movl $0, %ebx    # 0 means current brk
   int $0x80
   # new value is already in eax, return in eax
 .endm
@@ -132,21 +132,21 @@ fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadat
 # the user wants
 .macro increase_brk size
   get_cur_brk                 # |
-  mov %eax, %ebx              # |
+  movl %eax, %ebx             # |
   addl \size, %ebx            # |
   addl (metadata_size), %ebx  # |
-  mov $45, %eax               # |
+  movl $45, %eax              # |
   int $0x80                   # | set brk to current_brk + n_size + metadata size
   # new value is already in eax, return in eax
 .endm
 
 .macro debug
   pushad
-  mov $4, %eax         # write sys call
-  mov $1, %ebx         # stdout
-  mov $str_debug, %ecx # const char *
-  mov $3, %edx         # size_t
-  int $0x80            # ssize_t write(stdout, "Hi\n", 3) MESSES WITH eax
+  movl $4, %eax         # write sys call
+  movl $1, %ebx         # stdout
+  movl $str_debug, %ecx # const char *
+  movl $3, %edx         # size_t
+  int $0x80             # ssize_t write(stdout, "Hi\n", 3) MESSES WITH eax
   popad
 .endm
 
@@ -183,10 +183,10 @@ fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadat
 .endm
 
 .macro print char_p len
-  mov $4, %eax
-  mov $1, %ebx
-  mov \char_p, %ecx
-  mov \len, %edx
+  movl $4, %eax
+  movl $1, %ebx
+  movl \char_p, %ecx
+  movl \len, %edx
   int $0x80
 .endm
 
@@ -199,7 +199,7 @@ fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadat
 
 print_chunk_list:
     pushad             # we may come from C
-    mov %esp, %ebp
+    movl %esp, %ebp
     subl $8, %esp      # -4(ebp) = current chunk base address (node of the linked list)
                        # -8(ebp) = chunk index
 
@@ -235,7 +235,7 @@ print_chunk_list:
     insert_ascii_into_string %edx %ebx
 
     movl $fmt_chunk_info, %edx                 # |
-    add $78, %edx                              # | fmt_chunk_info + 78 is our (Z) location
+    addl $78, %edx                             # | fmt_chunk_info + 78 is our (Z) location
 
     movl -4(%ebp), %eax                        # |
     movb (%eax), %al                           # |
@@ -269,17 +269,17 @@ print_chunk_list:
     print $str_list_is_empty $20
 
   print_chunk_list_end:
-    mov %ebp, %esp # |
-    popad          # |
-    ret            # | leave frame
+    movl %ebp, %esp # |
+    popad           # |
+    ret             # | leave frame
 
 # 2 arguments:
 #   least significant part of memory address in coded in ascii
 #   most significant part of memory address in coded in ascii
 # no local vars, no return value
 print_initial_brk_addr: # void f(most, least)
-    mov $fmt_initial_brk_addr, %ebx
-    add $29, %ebx # 29 is our offset here
+    movl $fmt_initial_brk_addr, %ebx
+    addl $29, %ebx # 29 is our offset here
     insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
     print $fmt_initial_brk_addr, $39
     ret
@@ -289,8 +289,8 @@ print_initial_brk_addr: # void f(most, least)
 #   most significant part of memory address in coded in ascii
 # no local vars, no return value
 print_new_brk:
-    mov $fmt_new_brk, %ebx
-    add $13, %ebx # 13 is our offset here
+    movl $fmt_new_brk, %ebx
+    addl $13, %ebx # 13 is our offset here
     insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
     print $fmt_new_brk, $22
     ret
@@ -299,8 +299,8 @@ print_new_brk:
 #   4 bytes integer coded in ascii
 # no local vars, no return value
 print_malloca:
-    mov $fmt_malloca, %ebx
-    add $20, %ebx # 14 is our offset here
+    movl $fmt_malloca, %ebx
+    addl $20, %ebx # 14 is our offset here
     insert_ascii_into_string %ebx, 4(%esp)
     print $fmt_malloca, $33
     ret
@@ -308,63 +308,63 @@ print_malloca:
 # Converts the byte in dl to ascii and returns in al
 _byte2ascii:
     push %edx
-    and $0x0000000f, %edx
-    xor %eax, %eax
-    mov %dl, %al
-    sub $10, %dl
+    andl $0x0000000f, %edx
+    xorl %eax, %eax
+    movb %dl, %al
+    subb $10, %dl
     jge _bytes2ascii_letter
-    add $0x30, %al # 0x30 is ascii 0
+    addb $0x30, %al # 0x30 is ascii 0
     pop %edx
     ret
   _bytes2ascii_letter:
-    add $0x57, %al # 0x57 = 0x61 (ascii a) - 10 (10 chars previously handled, the numbers))
+    addb $0x57, %al # 0x57 = 0x61 (ascii a) - 10 (10 chars previously handled, the numbers))
     pop %edx
     ret
 
 # Receives a memory address in edx and returns the
 # least significant part in ebx and the most significant part in ecx
 bytes2ascii:
-    xor %ebx, %ebx
-    xor %ecx, %ecx
+    xorl %ebx, %ebx
+    xorl %ecx, %ecx
 
     # least significant
     call _byte2ascii
-    shl  $24, %eax   # Little endian here. Store in it reverse
-    or   %eax, %ebx
+    shll  $24, %eax   # Little endian here. Store in it reverse
+    orl   %eax, %ebx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    shl  $16, %eax
-    or   %eax, %ebx
+    shll  $16, %eax
+    orl   %eax, %ebx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    shl  $8, %eax
-    or   %eax, %ebx
+    shll  $8, %eax
+    orl   %eax, %ebx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    or   %eax, %ebx
+    orl   %eax, %ebx
 
     # most significant
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    shl  $24, %eax
-    or   %eax, %ecx
+    shll  $24, %eax
+    orl   %eax, %ecx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    shl  $16, %eax
-    or   %eax, %ecx
+    shll  $16, %eax
+    orl   %eax, %ecx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    shl  $8, %eax
-    or   %eax, %ecx
+    shll  $8, %eax
+    orl   %eax, %ecx
 
-    shr  $4, %edx
+    shrl  $4, %edx
     call _byte2ascii
-    or   %eax, %ecx
+    orl   %eax, %ecx
 
     ret
 
@@ -381,7 +381,7 @@ malloca_init: # no arguments, no local vars, no return value
     push %ecx
     push %ebx
     call print_initial_brk_addr
-    add $8, %esp
+    addl $8, %esp
   malloca_init_END:
     ret
 
@@ -393,9 +393,9 @@ get_free_chunk: # 1 4b argument, no local var, pointer return value (may be null
     ret
 
 malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
-    pushad                   # | we are comming from C, push all registers
-    mov %esp, %ebp           # | init frame pointer
-    sub $4, %esp             # value to be returned
+    pushad                    # | we are comming from C, push all registers
+    movl %esp, %ebp           # | init frame pointer
+    subl $4, %esp             # value to be returned
 
     cmpl $0, initial_brk # |
     jne  initialized     # | if initial_brk is variable 0, init. Proceed otherwise
@@ -416,7 +416,7 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
 
     push 28(%ebp)              # |
     call get_free_chunk        # |
-    add $4, %esp               # | get_free_chunk(size_t n_size)
+    addl $4, %esp              # | get_free_chunk(size_t n_size)
 
     cmpl $0, %eax              # |
     jne malloca_END            # | if get_free_chunk could get a chunk, return it
