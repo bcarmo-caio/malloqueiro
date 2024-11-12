@@ -104,7 +104,7 @@ fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadat
 .endm
 
 .macro pushad
-  push %ecx # |  It makes no sens pushing eax and esp
+  push %ecx # |  It makes no sense pushing eax and esp
   push %edx # |
   push %ebx # |
   push %ebp # |
