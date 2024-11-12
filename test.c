@@ -6,6 +6,7 @@
 #include <string.h>
 
 void *malloca(size_t bytes); /* bytes must be <= 0x0000FFFF*/
+void print_chunk_list(void);
 
 #define new_line() { \
     char msg[] = "\n"; \
@@ -29,12 +30,14 @@ void *malloca(size_t bytes); /* bytes must be <= 0x0000FFFF*/
 int main() {
     int fd;
     char got_from_malloca[] = "Got from malloqueiro: 0xzzzzzzzz\n";
-    void *ptr;
-    ptr = malloca(1);
-    print_got_from_malloqueiro(ptr); new_line();
-    ((char*) ptr)[0] = 'a';
-    print_got_from_malloqueiro(malloca(5));          new_line();
-    print_got_from_malloqueiro(malloca(0xffff));     new_line();
-    print_got_from_malloqueiro(malloca(0xffff + 1)); new_line();
+    new_line();
+    print_chunk_list();
+    print_got_from_malloqueiro(malloca(1));
+    print_chunk_list(); new_line();
+    print_got_from_malloqueiro(malloca(5));
+    print_chunk_list(); new_line();
+    print_got_from_malloqueiro(malloca(0xffff));
+    print_chunk_list(); new_line();
+/*    print_got_from_malloqueiro(malloca(0xffff + 1)); new_line();*/
   return 0;
 }

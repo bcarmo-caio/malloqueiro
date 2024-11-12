@@ -60,6 +60,8 @@ str_not_init: .string "Malloqueiro has not yet been initialized\n"
 str_debug: .string "Hi\n"
 str_too_much: .string "Malloqueiro can not allocate more than 0x0000ffff bytes at once\n"
 str_new_line: .string "\n"
+str_list_is_empty: .string "Chunk list is empty\n"
+str_end_list: .string "End of chunk list\n"
 metadata_size: .long 8
 
 .section .data
@@ -70,6 +72,7 @@ tail: .long 0 # null
 fmt_initial_brk_addr: .string "Inital brk memory address: 0xZZZZZZZZ\n\n"
 fmt_new_brk: .string "New brk at 0xZZZZZZZZ\n"
 fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n"
+fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9,23,41,78 (total 81)
 
 
 # +--------------------+
@@ -192,7 +195,83 @@ fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n"
 .endm
 
 .section .text
-.globl malloca, malloca_free
+.globl malloca, malloca_free, print_chunk_list
+
+print_chunk_list:
+    pushad             # we may come from C
+    mov %esp, %ebp
+    subl $8, %esp      # -4(ebp) = current chunk base address (node of the linked list)
+                       # -8(ebp) = chunk index
+
+    movl (head), %eax  # |
+    cmpl $0, %eax      # |
+    je  list_is_empty  # | if head is null, list is empty
+
+    movl %eax, -4(%ebp) # move head to current chunk of linked list
+    movl $1, -8(%ebp)   # init chunk index with 1
+
+  print_chunk_list_loop:
+    movl -4(%ebp), %edx                        # get next chunk
+    cmpl $0, %edx                              # |
+    je print_chunk_list_end                    # | if next is null, end function
+    call bytes2ascii                           # get chunk address from edx in ascii (ebx)(ecx)
+    movl $fmt_chunk_info, %edx                 # |
+    addl $23, %edx                             # | fmt_chunk_info + 23 is our 0xzzzzzzzz location in string
+    insert_ascii_into_string2 %edx %ecx %ebx
+
+    movl -8(%ebp), %edx                        # |
+    call bytes2ascii                           # |
+    movl $fmt_chunk_info, %edx                 # |
+    addl $9, %edx                              # |
+    insert_ascii_into_string2 %edx, %ecx, %ebx # | put chunk index (ascii) into string
+
+    movl -4(%ebp), %edx                        # |
+    addl $5, %edx                              # | chunk size location
+    movl (%edx), %edx                          # | put chunk size in edx
+    andl $0x0000ffff, %edx                     # chunk size location has 3 bytes and we use 2
+    call bytes2ascii                           # get chunk size in ascii (...)(ecx)
+    movl $fmt_chunk_info, %edx                 # |
+    addl $41, %edx                             # | fmt_chunk_info + 41 is our 0xZZZZ location in string
+    insert_ascii_into_string %edx %ebx
+
+    movl $fmt_chunk_info, %edx                 # |
+    add $78, %edx                              # | fmt_chunk_info + 78 is our (Z) location
+
+    movl -4(%ebp), %eax                        # |
+    movb (%eax), %al                           # |
+    cmpb $0, %al                               # |
+    je format_free                             # | get if chunk is free or in use
+
+    movb $0x55, (%edx)                         # not free, U = 0x55
+    jmp next_chunk
+
+  format_free:
+    movb $0x46, (%edx)                         # free, F = 0x46
+
+  next_chunk:
+    print $fmt_chunk_info $81                  # print string with current chunk info
+
+    movl -4(%ebp), %eax                        # |
+    addl $1, %eax                              # |
+    cmpl $0, (%eax)                            # | if next chunk is null, print end of list and leave
+    jne list_has_next                          # | else get next chunk
+
+    print $str_end_list $18                    # |
+    jmp print_chunk_list_end                   # |
+
+  list_has_next:
+    addl $1, -8(%ebp)                          # chunk index++
+    movl (%eax), %eax                          # |
+    movl %eax, -4(%ebp)                        # | set next chunk variable (cur_node = cur_node->next)
+    jmp print_chunk_list_loop                  # continue
+
+  list_is_empty:
+    print $str_list_is_empty $20
+
+  print_chunk_list_end:
+    mov %ebp, %esp # |
+    popad          # |
+    ret            # | leave frame
 
 # 2 arguments:
 #   least significant part of memory address in coded in ascii
