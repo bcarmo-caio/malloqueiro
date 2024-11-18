@@ -196,7 +196,10 @@ fmt_brk_head_tail: .string "Brk @[0xZZZZZZZZ] - Head @[0xYYYYYYYY] - Tail @[0xHH
 .endm
 
 .section .text
-.globl malloca, malloca_free, print_chunk_list
+
+.globl malloca
+.globl malloca_free
+.globl print_chunk_list
 
 print_chunk_list:
     pushad             # we may come from C
