@@ -69,11 +69,11 @@ initial_brk: .long 0 # null
 head: .long 0 # null
 tail: .long 0 # null
 
-fmt_initial_brk_addr: .string "Inital brk memory address: 0xZZZZZZZZ\n\n"
-fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n"
-fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9,23,41,78 (total 81)
-fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" #45, 36
+fmt_initial_brk_addr: .string "Inital brk @[0xZZZZZZZZ]\n\n" # 15, 26
 fmt_brk_head_tail: .string "Brk @[0xZZZZZZZZ] - Head @[0xYYYYYYYY] - Tail @[0xHHHHHHHH]\n\n" # 8, 29, 50, 61
+fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n" # 20, 33
+fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9, 23, 41, 78, 81
+fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36, 45
 
 
 # +--------------------+
@@ -283,9 +283,9 @@ print_chunk_list:
 # no local vars, no return value
 print_initial_brk_addr: # void f(most, least)
     movl $fmt_initial_brk_addr, %ebx
-    addl $29, %ebx # 29 is our offset here
+    addl $15, %ebx # 15 is our offset here
     insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
-    print $fmt_initial_brk_addr, $39
+    print $fmt_initial_brk_addr, $26
     ret
 
 print_brk_head_tail: # no arguments, no local vars, no return value
@@ -316,7 +316,7 @@ print_brk_head_tail: # no arguments, no local vars, no return value
 # no local vars, no return value
 print_malloca:
     movl $fmt_malloca, %ebx
-    addl $20, %ebx # 14 is our offset here
+    addl $20, %ebx # 20 is our offset here
     insert_ascii_into_string %ebx, 4(%esp)
     print $fmt_malloca, $33
     ret
