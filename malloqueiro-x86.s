@@ -411,7 +411,7 @@ malloca_init: # no arguments, no local vars, no return value
     cmpl $0, (initial_brk)   # |
     je malloca_init_proceed  # | if initial_brk variable is 0, proceed. Log and abort otherwise
     print $str_already_init, $41
-    jmp malloca_init_END
+    jmp malloca_init_end
   malloca_init_proceed:
     get_cur_brk
     movl %eax, (initial_brk)    # save initial brk value to initial_brk variable
@@ -421,7 +421,7 @@ malloca_init: # no arguments, no local vars, no return value
     push %ebx
     call print_initial_brk_addr
     addl $8, %esp
-  malloca_init_END:
+  malloca_init_end:
     ret
 
 get_free_chunk: # 1 4b argument, no local var, pointer return value (may be null)
@@ -458,7 +458,7 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     addl $4, %esp              # | get_free_chunk(size_t n_size)
 
     cmpl $0, %eax              # |
-    jne malloca_END            # | if get_free_chunk could get a chunk, return it
+    jne malloca_end            # | if get_free_chunk could get a chunk, return it
                                # | (head already exists at this point)
 
     increase_brk 28(%ebp)      # increase brk by the ammount user wants (28 ebp) (plus metadata)
@@ -478,7 +478,7 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     movl (initial_brk), %ebx   # |
     movl %ebx, (head)          # |
     movl %ebx, (tail)          # | if head is null, set both head and tail to initial_brk
-    jmp malloca_END
+    jmp malloca_end
 
   set_tail:
     movl -4(%ebp), %ebx        # |
@@ -486,13 +486,13 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     movl (tail), %ecx          #
     movl %ebx, 1(%ecx)         # | tail->next = new chunk
     movl %ebx, (tail)          # | tail = new chunk
-    jmp malloca_END
+    jmp malloca_end
 
   too_much:
     print $str_too_much $64
     movl $0, -4(%ebp)          # puts null to return value
 
-  malloca_END:
+  malloca_end:
     call print_brk_head_tail
 
     movl -4(%ebp), %eax        # put return value into eax
