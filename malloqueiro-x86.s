@@ -313,14 +313,21 @@ print_brk_head_tail: # no arguments, no local vars, no return value
     print $fmt_brk_head_tail, $61
     ret
 
-# 1 arguments:
+# 1 argument:
 #   4 bytes integer coded in ascii
 # no local vars, no return value
 print_malloca:
+    push %ebp
+    movl %esp, %ebp
+
     movl $fmt_malloca, %ebx
     addl $20, %ebx # 20 is our offset here
-    insert_ascii_into_string %ebx, 4(%esp)
+    insert_ascii_into_string %ebx, 8(%ebp)
     print $fmt_malloca, $33
+
+    movl %ebp, %esp
+    pop %ebp
+
     ret
 
 # Converts the byte in dl to ascii and returns in al
