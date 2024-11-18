@@ -60,8 +60,9 @@ str_not_init: .string "Malloqueiro has not yet been initialized\n"
 str_debug: .string "Hi\n"
 str_too_much: .string "Malloqueiro can not allocate more than 0x0000ffff bytes at once\n"
 str_new_line: .string "\n"
-str_list_is_empty: .string "Chunk list is empty\n"
-str_end_list: .string "End of chunk list\n"
+str_printing_list: .string "Printing chunk list\n"
+str_list_is_empty: .string "Chunk list is empty\n\n"
+str_end_list: .string "End of chunk list\n\n"
 metadata_size: .long 8
 
 .section .data
@@ -199,10 +200,9 @@ fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36
 
 .globl malloca
 .globl malloca_free
-.globl print_chunk_list
 
-print_chunk_list:
-    pushad             # we may come from C
+print_chunk_list: # no parameter, 2 4bytes var, no return value
+    push %ebp
     movl %esp, %ebp
     subl $8, %esp      # -4(ebp) = current chunk base address (node of the linked list)
                        # -8(ebp) = chunk index
@@ -213,6 +213,8 @@ print_chunk_list:
 
     movl %eax, -4(%ebp) # move head to current chunk of linked list
     movl $1, -8(%ebp)   # init chunk index with 1
+
+    print $str_printing_list, $20
 
   print_chunk_list_loop:
     movl -4(%ebp), %edx                        # get next chunk
@@ -260,7 +262,7 @@ print_chunk_list:
     cmpl $0, (%eax)                            # | if next chunk is null, print end of list and leave
     jne list_has_next                          # | else get next chunk
 
-    print $str_end_list $18                    # |
+    print $str_end_list $19                    # |
     jmp print_chunk_list_end                   # |
 
   list_has_next:
@@ -270,11 +272,11 @@ print_chunk_list:
     jmp print_chunk_list_loop                  # continue
 
   list_is_empty:
-    print $str_list_is_empty $20
+    print $str_list_is_empty $21
 
   print_chunk_list_end:
     movl %ebp, %esp # |
-    popad           # |
+    pop %ebp        # |
     ret             # | leave frame
 
 # 2 arguments:
@@ -395,7 +397,10 @@ malloca_free: # 1 argument, no local var, no return value. void f(void *ptr)
     je already_freed           # | if already freed, print err and abort
 
     movb $0, (%ebx)            # set chunk as free
+    jmp malloca_free_end
 
+    call print_brk_head_tail
+    call print_chunk_list
     popad
     ret
 
@@ -497,6 +502,7 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
 
   malloca_end:
     call print_brk_head_tail
+    call print_chunk_list
 
     movl -4(%ebp), %eax        # put return value into eax
     movl %ebp, %esp            # |
