@@ -70,10 +70,10 @@ head: .long 0 # null
 tail: .long 0 # null
 
 fmt_initial_brk_addr: .string "Inital brk memory address: 0xZZZZZZZZ\n\n"
-fmt_new_brk: .string "New brk at 0xZZZZZZZZ\n"
 fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n"
 fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9,23,41,78 (total 81)
 fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" #45, 36
+fmt_brk_head_tail: .string "Brk @[0xZZZZZZZZ] - Head @[0xYYYYYYYY] - Tail @[0xHHHHHHHH]\n\n" # 8, 29, 50, 61
 
 
 # +--------------------+
@@ -285,15 +285,27 @@ print_initial_brk_addr: # void f(most, least)
     print $fmt_initial_brk_addr, $39
     ret
 
-# 2 arguments:
-#   least significant part of memory address in coded in ascii
-#   most significant part of memory address in coded in ascii
-# no local vars, no return value
-print_new_brk:
-    movl $fmt_new_brk, %ebx
-    addl $13, %ebx # 13 is our offset here
-    insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
-    print $fmt_new_brk, $22
+print_brk_head_tail: # no arguments, no local vars, no return value
+    get_cur_brk
+    movl %eax, %edx                                  # |
+    call bytes2ascii                                 # |
+    movl $fmt_brk_head_tail, %edx                    # |
+    addl $8, %edx                                    # 8 is 0xZZZZZZZZ
+    insert_ascii_into_string2 %edx, %ecx, %ebx       # fill str with current brk
+
+    movl (head), %edx                                # |
+    call bytes2ascii                                 # |
+    movl $fmt_brk_head_tail, %edx                    # |
+    addl $29, %edx                                   # | 29 is 0xYYYYYYYY
+    insert_ascii_into_string2 %edx, %ecx, %ebx       # fill str with head
+
+    movl (tail), %edx                                # |
+    call bytes2ascii                                 # |
+    movl $fmt_brk_head_tail, %edx                    # |
+    addl $50, %edx                                   # | 50 is 0xHHHHHHHH
+    insert_ascii_into_string2 %edx, %ecx, %ebx       # fill str with tail
+
+    print $fmt_brk_head_tail, $61
     ret
 
 # 1 arguments:
@@ -461,13 +473,6 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     movl $0, -7(%edx)          # set next chunk as null into chunk metadata
     movb $1, -8(%edx)          # set chunk in use into chunk metadata
 
-    movl %eax, %edx            # |
-    call bytes2ascii           # |
-    push %ecx                  # |
-    push %ebx                  # | get memory in ascii
-    call print_new_brk         # |
-    addl $8, %esp              # | debug: print new brk address
-
     cmpl $0, (head)            # |
     jne set_tail               # |
     movl (initial_brk), %ebx   # |
@@ -488,6 +493,8 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     movl $0, -4(%ebp)          # puts null to return value
 
   malloca_END:
+    call print_brk_head_tail
+
     movl -4(%ebp), %eax        # put return value into eax
     movl %ebp, %esp            # |
     popad                      # |
