@@ -10,8 +10,8 @@
 
 # Each memory chunk is designed as follows:
 #  +-------------------------------------------+ high
-#  |   Allocated space                         | 0x0008 + n \
-#  |   destinated                              |  ...       |  USER SPACE (n bytes)
+#  |   Allocated                               | 0x0008 + n \
+#  |   space                                   |  ...       |  USER SPACE (n bytes)
 #  |   to caller (n bytes)                     |  ...       /
 #  +-------------------------------------------+ 0x0008  <--- this address is returned to user
 #  |   Chunk size excluding metadata (3 bytes) | 0x0005     \
@@ -39,7 +39,7 @@
 #         if chunk_userspace_size = desired size -> return it
 #         if chunk_userspace_size < desired size + (metadata_size + 1)
 #           return it (we cannot break it into two, not enough space for metadata)
-#         if chunk_userspace_size >= deired size + (metadata_size + 1)
+#         if chunk_userspace_size >= desired size + (metadata_size + 1)
 #           break it into 2 chunks:
 #             chunk_A having desired size and
 #             chunk_B having chunk_userspace_size < deired size + (metadata_size + 1) and
@@ -70,9 +70,9 @@ initial_brk: .long 0 # null
 head: .long 0 # null
 tail: .long 0 # null
 
-fmt_initial_brk_addr: .string "Inital brk @[0xZZZZZZZZ]\n\n" # 15, 26
+fmt_initial_brk_addr: .string "Initial brk @[0xZZZZZZZZ]\n\n" # 16, 27
 fmt_brk_head_tail: .string "Brk @[0xZZZZZZZZ] - Head @[0xYYYYYYYY] - Tail @[0xHHHHHHHH]\n\n" # 8, 29, 50, 61
-fmt_malloca: .string "Trying to alocate 0xZZZZ byte(s)\n" # 20, 33
+fmt_malloca: .string "Trying to allocate 0xZZZZ byte(s)\n" # 21, 34
 fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9, 23, 41, 78, 81
 fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36, 45
 
@@ -285,9 +285,10 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
 # no local vars, no return value
 print_initial_brk_addr: # void f(most, least)
     movl $fmt_initial_brk_addr, %ebx
-    addl $15, %ebx # 15 is our offset here
+    addl $16, %ebx # 16 is our offset here
     insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
-    print $fmt_initial_brk_addr, $26
+    print $fmt_initial_brk_addr, $27
+  print_initial_brk_addr_end:
     ret
 
 print_brk_head_tail: # no arguments, no local vars, no return value
@@ -321,9 +322,9 @@ print_malloca:
     movl %esp, %ebp
 
     movl $fmt_malloca, %ebx
-    addl $20, %ebx # 20 is our offset here
+    addl $21, %ebx # 21 is our offset here
     insert_ascii_into_string %ebx, 8(%ebp)
-    print $fmt_malloca, $33
+    print $fmt_malloca, $34
 
     movl %ebp, %esp
     pop %ebp
