@@ -505,14 +505,14 @@ remove_chunk:
 
   merge_with_previous:
     # BEGIN merge previous and current chunks
-    movl (head), %ebx   # |
-    movl 1(%ebx), %ebx  # | ebx = head -> next
-    cmpl %ebx, (tail)   # |
-    jne L1              # |
-    reset_brk           # |
-    jmp RC_END          # | if head -> next == tail, reset brk, head, tail and leave
+    movl (head), %ebx           # |
+    movl 1(%ebx), %ebx          # | ebx = head -> next
+    cmpl %ebx, (tail)           # |
+    jne merge_head_is_not_tail  # |
+    reset_brk                   # |
+    jmp remove_chunk_end        # | if head -> next == tail, reset brk, head, tail and leave
 
-  L1:
+  merge_head_is_not_tail:
     movl 8(%ebp), %ebx  # ebx = cur_chunk
     movl 1(%ebx), %ecx  # ecx = cur_chunk -> next
     movl %ecx, 1(%esi)  # prev_chunk -> next = cur_chunk -> next
@@ -536,7 +536,7 @@ remove_chunk:
     movl $45, %eax    # |
     int $0x80         # | lower brk to new tail value
 
-    jmp RC_END
+    jmp remove_chunk_end
     # END merge previous and current chunks
 
   merge_with_next:
@@ -544,9 +544,9 @@ remove_chunk:
     cmpl %eax, (tail)   # |
     je cur_is_tail      # | cannot merge with next chunk, current chunk is tail. Lower brk and set new tail
 
-    movl 1(%eax), %ebx # put next_chunk in ebx
-    cmpb $0, (%ebx)    # |
-    jne RC_END         # | cannot merge with next chunk, it is not free
+    movl 1(%eax), %ebx   # put next_chunk in ebx
+    cmpb $0, (%ebx)      # |
+    jne remove_chunk_end # | cannot merge with next chunk, it is not free
 
     # BEGIN merge current and next chunks
     # Note that as next chunk is free, it cannot be the tail hence we are not going
@@ -563,7 +563,7 @@ remove_chunk:
     addw %cx, %dx             # |
     addw (metadata_size), %dx # |
     movw %dx, 5(%eax)         # | cur_chunk -> size = (cur_chunk -> size) + (next_chunk -> size) + metadata_size
-    jmp RC_END
+    jmp remove_chunk_end
 
   cur_is_tail:
     movl %esi, (tail)    # set tail as prev_chunk
@@ -573,7 +573,7 @@ remove_chunk:
     int $0x80            # | lower brk to cur_chunk
     # END merge current and next chunks
 
-  RC_END:
+  remove_chunk_end:
     movl %ebp, %esp
     pop %ebp
     ret
