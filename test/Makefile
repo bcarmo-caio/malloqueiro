@@ -23,7 +23,7 @@ TESTS=\
 	test_07 \
 	test_08
 
-all: clean $(NO_MALLOC_FREE_LIB) $(TESTS)
+all: $(NO_MALLOC_FREE_LIB) $(TESTS)
 
 test_%: $(NO_MALLOC_FREE_LIB)
 	@$(CC) $(CFLAGS) src/$@.c src/common.c ../lib/malloqueiro.a -o bin/$@
@@ -31,7 +31,7 @@ test_%: $(NO_MALLOC_FREE_LIB)
 $(NO_MALLOC_FREE_LIB):
 	@$(CC) $(CFLAGS) -shared -fPIC src/no_malloc_free_x86.c -o lib/$(NO_MALLOC_FREE_LIB)
 
-run_tests: all
+run_tests:
 	@t=test_00; ./bin/$$t && echo "$$t: ok"
 	@t=test_01; ./bin/$$t && echo "$$t: ok"
 	@t=test_02; ./bin/$$t && echo "$$t: ok"
@@ -42,10 +42,10 @@ run_tests: all
 	@t=test_07; ./bin/$$t && echo "$$t: ok"
 	@t=test_08; ./bin/$$t && echo "$$t: ok"
 
-debug: all
+debug:
 	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) gdb bin/$(TEST_TO_DEBUG)
 
-test_no_malloc_free_x86: all
+test_no_malloc_free_x86:
 	@$(CC) $(CFLAGS) src/test_no_malloc_free.c -o bin/test_no_malloc_free_x86
 	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) bin/test_no_malloc_free_x86
 

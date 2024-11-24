@@ -13,7 +13,7 @@ ARFLAGS=\
 	rcs \
 	--target=elf32-i386
 
-all: clean lib/malloqueiro.a
+all: lib/malloqueiro.a
 
 lib/%.a: obj/%.o
 	@$(AR) $(ARFLAGS) $@ $<
@@ -21,8 +21,15 @@ lib/%.a: obj/%.o
 obj/%.o: src/%.s
 	@$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
+run_tests:
+	@make clean
+	@make all
+	@make -C test clean
+	@make -C test
+	@make -C test run_tests
+
 clean:
 	@rm -rf obj lib
 	@mkdir obj lib
 
-.PHONY: all clean
+.PHONY: all clean run_tests
