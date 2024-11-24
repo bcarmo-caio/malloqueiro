@@ -8,29 +8,21 @@ CFLAGS=\
 	-no-pie \
 	-m32 \
 	-O0
-BIN=test_x86
-NO_MALLOC_FREE_LIB=no_malloc_free_x86.so
-NO_MALLOC_FREE_TEST_X86=test_no_malloc_free_x86
+AR=ar
+ARFLAGS=\
+	rcs \
+	--target=elf32-i386
 
-all: clean $(BIN) $(NO_MALLOC_FREE_LIB)
+all: clean lib/malloqueiro.a
 
-$(BIN): $(NO_MALLOC_FREE_LIB) test_x86.c malloqueiro-x86.s
-	@$(CC) $(CFLAGS) test_x86.c malloqueiro-x86.s -o $(BIN)
+lib/%.a: obj/%.o
+	@$(AR) $(ARFLAGS) $@ $<
 
-$(NO_MALLOC_FREE_LIB): no_malloc_free_x86.c
-	@$(CC) $(CFLAGS) -shared -fPIC -o $(NO_MALLOC_FREE_LIB) no_malloc_free_x86.c
-
-run: all
-	@LD_PRELOAD=./$(NO_MALLOC_FREE_LIB) ./$(BIN)
-
-debug: all
-	@LD_PRELOAD=./$(NO_MALLOC_FREE_LIB) gdb ./$(BIN)
-
-test_no_malloc_free_x86: all test_no_malloc_free.c
-	@$(CC) $(CFLAGS) test_no_malloc_free.c -o test_no_malloc_free_x86
-	@LD_PRELOAD=./$(NO_MALLOC_FREE_LIB) ./test_no_malloc_free_x86
+obj/%.o: src/%.s
+	@$(CC) $(CFLAGS) -fPIC -c $< -o $@
 
 clean:
-	@rm -f *.o $(BIN) $(NO_MALLOC_FREE_LIB) test_no_malloc_free_x86
+	@rm -rf obj lib
+	@mkdir obj lib
 
-.PHONY: all run debug clean
+.PHONY: all clean

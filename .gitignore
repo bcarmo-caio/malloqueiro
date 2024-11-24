@@ -1,6 +1,10 @@
 .idea/
 .gdbinit
 test_x86
+test/bin/*
+test/lib/*
+lib/*
+obj/*
 
 # Prerequisites
 *.d
