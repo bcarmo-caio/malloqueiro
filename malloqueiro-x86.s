@@ -211,6 +211,41 @@ fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36
 .globl malloca
 .globl malloca_free
 
+# START test only purpose
+.globl breakpoint
+.globl get_initial_brk
+.globl get_head
+.globl get_tail
+.globl get_current_brk
+
+breakpoint:
+  ret
+
+get_initial_brk:
+    pushad
+    movl (initial_brk), %eax
+    popad
+    ret
+
+get_head:
+    pushad
+    movl (head), %eax
+    popad
+    ret
+
+get_tail:
+    pushad
+    movl (tail), %eax
+    popad
+    ret
+
+get_current_brk:
+    pushad
+    get_cur_brk
+    popad
+    ret
+# END test only purpose
+
 print_chunk_list: # no parameter, 2 4bytes var, no return value
     cmpb $0, (debug_enabled)
     je print_chunk_list_end
