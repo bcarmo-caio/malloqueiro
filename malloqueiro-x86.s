@@ -64,6 +64,7 @@ str_printing_list: .string "Printing chunk list\n"
 str_list_is_empty: .string "Chunk list is empty\n\n"
 str_end_list: .string "End of chunk list\n\n"
 metadata_size: .byte 8
+debug_enabled: .byte 0
 
 .section .data
 initial_brk: .long 0 # null
@@ -202,10 +203,14 @@ fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36
 .globl malloca_free
 
 print_chunk_list: # no parameter, 2 4bytes var, no return value
+    cmpb $0, (debug_enabled)
+    je print_chunk_list_end
+
     push %ebp
     movl %esp, %ebp
     subl $8, %esp      # -4(ebp) = current chunk base address (node of the linked list)
                        # -8(ebp) = chunk index
+
 
     movl (head), %eax  # |
     cmpl $0, %eax      # |
@@ -219,7 +224,7 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
   print_chunk_list_loop:
     movl -4(%ebp), %edx                        # get next chunk
     cmpl $0, %edx                              # |
-    je print_chunk_list_end                    # | if next is null, end function
+    je print_chunk_list_end_prelude            # | if next is null, end function
     call bytes2ascii                           # get chunk address from edx in ascii (ebx)(ecx)
     movl $fmt_chunk_info, %edx                 # |
     addl $23, %edx                             # | fmt_chunk_info + 23 is our 0xzzzzzzzz location in string
@@ -263,7 +268,7 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
     jne list_has_next                          # | else get next chunk
 
     print $str_end_list $19                    # |
-    jmp print_chunk_list_end                   # |
+    jmp print_chunk_list_end_prelude           # |
 
   list_has_next:
     addl $1, -8(%ebp)                          # chunk index++
@@ -274,9 +279,10 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
   list_is_empty:
     print $str_list_is_empty $21
 
-  print_chunk_list_end:
+  print_chunk_list_end_prelude:
     movl %ebp, %esp # |
     pop %ebp        # |
+  print_chunk_list_end:
     ret             # | leave frame
 
 # 2 arguments:
@@ -284,6 +290,9 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
 #   most significant part of memory address in coded in ascii
 # no local vars, no return value
 print_initial_brk_addr: # void f(most, least)
+    cmpb $0, (debug_enabled)
+    je print_initial_brk_addr_end
+
     movl $fmt_initial_brk_addr, %ebx
     addl $16, %ebx # 16 is our offset here
     insert_ascii_into_string2 %ebx, 8(%esp), 4(%esp)
@@ -292,6 +301,9 @@ print_initial_brk_addr: # void f(most, least)
     ret
 
 print_brk_head_tail: # no arguments, no local vars, no return value
+    cmpb $0, (debug_enabled)
+    je print_brk_head_tail_end
+
     get_cur_brk
     movl %eax, %edx                                  # |
     call bytes2ascii                                 # |
@@ -312,12 +324,16 @@ print_brk_head_tail: # no arguments, no local vars, no return value
     insert_ascii_into_string2 %edx, %ecx, %ebx       # fill str with tail
 
     print $fmt_brk_head_tail, $61
+  print_brk_head_tail_end:
     ret
 
 # 1 argument:
 #   4 bytes integer coded in ascii
 # no local vars, no return value
 print_malloca:
+    cmpb $0, (debug_enabled)
+    je print_malloca_end
+
     push %ebp
     movl %esp, %ebp
 
@@ -329,6 +345,7 @@ print_malloca:
     movl %ebp, %esp
     pop %ebp
 
+  print_malloca_end:
     ret
 
 # Converts the byte in dl to ascii and returns in al
