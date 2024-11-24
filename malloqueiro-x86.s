@@ -75,6 +75,7 @@ fmt_initial_brk_addr: .string "Initial brk @[0xZZZZZZZZ]\n\n" # 16, 27
 fmt_brk_head_tail: .string "Brk @[0xZZZZZZZZ] - Head @[0xYYYYYYYY] - Tail @[0xHHHHHHHH]\n\n" # 8, 29, 50, 61
 fmt_malloca: .string "Trying to allocate 0xZZZZ byte(s)\n" # 21, 34
 fmt_chunk_info: .string "Chunk [0xYYYYYYYY] @[0xZZZZZZZZ] size (0xZZZZ + metadata) is (F)ree/(U)used: (Z)\n" # 9, 23, 41, 78, 81
+fmt_freeing_mem: .string "Freeing chunk @[0xZZZZZZZZ]\n" # 18, 28
 fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36, 45
 
 
@@ -141,6 +142,14 @@ fmt_already_freed: .string "Error: Double free or corruption: 0xZZZZZZZZ\n" # 36
   movl $45, %eax              # |
   int $0x80                   # | set brk to current_brk + n_size + metadata size
   # new value is already in eax, return in eax
+.endm
+
+.macro reset_brk
+  movl $0, (head)           # reset head
+  movl $0, (tail)           # reset tail
+  movl $45, %eax            # |
+  movl (initial_brk), %ebx  # |
+  int $0x80                 # | set brk to initial_brk
 .endm
 
 .macro debug
@@ -411,21 +420,174 @@ bytes2ascii:
 
     ret
 
+# 1 argument: 4 bytes - Current chunk memory address
+# No local var
+# Return pointer to previous chunk or 0 if current chunk is head
+get_previous_chunk:
+    push %ebp
+    movl %esp, %ebp
+
+    movl 8(%ebp), %eax    # put cur_chunk in eax
+    cmpl (head), %eax     # |
+    je cur_chunk_is_head  # | if cur_chunk is head, return 0 (null)
+
+    movl (head), %edx     # initialize loop with head
+  gpc_loop_init:
+    cmpl 1(%edx), %eax  # |
+    je found_prev       # if edx->next is cur_chunk, return edx
+    movl 1(%edx), %edx  # |
+    jmp gpc_loop_init   # put edx->next in edx and loop again (if user has sent us wrong value, just go on and let it explode)
+
+  found_prev:
+    mov %edx, %eax    # |
+    jmp get_prev_end  # | put edx (which is prev_chunk) in eax to return it
+
+  cur_chunk_is_head:
+    movl $0, %eax
+
+  get_prev_end:
+    movl %ebp, %esp
+    pop %ebp
+    ret
+
+# 1 argument: 4 bytes - Current chunk memory address
+# no local var
+# Return pointer to previous chunk or 0 if current chunk is head
+remove_chunk:
+    push %ebp
+    movl %esp, %ebp
+
+    push 8(%ebp)             # | current chunk argument
+    call get_previous_chunk  # |
+    addl $4, %esp            # |
+    movl %eax, %esi          # | get previous chunk in eax and backup it in esi
+
+    cmpl $0, %eax       # |
+    je merge_with_next  # | cannot merge with previous chunk, current chunk is head
+
+    cmpb $0, (%eax)     # |
+    jne merge_with_next # | cannot merge with previous chunk, it is not free
+
+  merge_with_previous:
+    # BEGIN merge previous and current chunks
+    movl (head), %ebx   # |
+    movl 1(%ebx), %ebx  # | ebx = head -> next
+    cmpl %ebx, (tail)   # |
+    jne L1              # |
+    reset_brk           # |
+    jmp RC_END          # | if head -> next == tail, reset brk, head, tail and leave
+
+  L1:
+    movl 8(%ebp), %ebx  # ebx = cur_chunk
+    movl 1(%ebx), %ecx  # ecx = cur_chunk -> next
+    movl %ecx, 1(%esi)  # prev_chunk -> next = cur_chunk -> next
+
+    movl $0, %ecx
+    movl $0, %edx
+    movw 5(%eax), %cx   # cx = prev_chunk -> size
+    movw 5(%ebx), %dx   # dx = cur_chunk -> size
+
+    # TODO: CHECK FOR OVERFLOW LATTER
+    addw %cx, %dx             # |
+    addw (metadata_size), %dx # |
+    movw %dx, 5(%eax)         # | previous_chunk -> size = (prev_chunk -> size) + (cur_chunk -> size) + metadata_size
+
+    movl %esi, 8(%ebp)  # update current_chunk argument before going to post_merge_prev
+    cmpl (tail), %ebx   # |
+    jne merge_with_next # | if current chunk is not tail, do not change tail or brk
+
+    movl %eax, (tail) # tail = prev_chunk
+    movl %eax, %ebx   # |
+    movl $45, %eax    # |
+    int $0x80         # | lower brk to new tail value
+
+    jmp RC_END
+    # END merge previous and current chunks
+
+  merge_with_next:
+    movl 8(%ebp), %eax  # put cur_chunk in eax
+    cmpl %eax, (tail)   # |
+    je cur_is_tail      # | cannot merge with next chunk, current chunk is tail. Lower brk and set new tail
+
+    movl 1(%eax), %ebx # put next_chunk in ebx
+    cmpb $0, (%ebx)    # |
+    jne RC_END         # | cannot merge with next chunk, it is not free
+
+    # BEGIN merge current and next chunks
+    # Note that as next chunk is free, it cannot be the tail hence we are not going
+    # to lower the brk
+    movl 1(%ebx), %ecx  # ecx = cur_chunk -> next
+    movl %ecx, 1(%eax)  # cur_chunk -> next = next_chunk -> next
+
+    movl $0, %ecx
+    movl $0, %edx
+    movw 5(%eax), %cx   # cx = cur_chunk -> size
+    movw 5(%ebx), %dx   # dx = next_chunk -> size
+
+    # TODO: CHECK FOR OVERFLOW LATTER
+    addw %cx, %dx             # |
+    addw (metadata_size), %dx # |
+    movw %dx, 5(%eax)         # | cur_chunk -> size = (cur_chunk -> size) + (next_chunk -> size) + metadata_size
+    jmp RC_END
+
+  cur_is_tail:
+    movl %esi, (tail)    # set tail as prev_chunk
+    movl $0, 1(%esi)     # |
+    movl -4(%ebp), %ebx  # |
+    movl $45, %eax       # |
+    int $0x80            # | lower brk to cur_chunk
+    # END merge current and next chunks
+
+  RC_END:
+    movl %ebp, %esp
+    pop %ebp
+    ret
+
 malloca_free: # 1 argument, no local var, no return value. void f(void *ptr)
-    pushad                     # | we are comming from C, push all registers
-    movl %esp, %ebp            # | init frame pointer
+    pushad                                     # | we are comming from C, push all registers
+    movl %esp, %ebp                            # | init frame pointer
+    subl $4, %esp                              # store chunk address (ptr - metadata_size)
 
-    movl 28(%ebp), %ebx        # get pointer argument
-    subl (metadata_size), %ebx # lower memory address to 'chunk in use' place
-    movb (%ebx), %al           # get if chunk is free or not
-    cmpb $0, %al               # |
-    je already_freed           # | if already freed, print err and abort
+    movl 28(%ebp), %ebx                        # get pointer argument
+    subl (metadata_size), %ebx                 # set memory address to 'chunk in use' place
+    movl %ebx, -4(%ebp)
 
-    movb $0, (%ebx)            # set chunk as free
+    cmpb $0, (debug_enabled)
+    je skip_print_malloca_free
+
+    movl %ebx, %edx                            # |
+    call bytes2ascii                           # |
+    movl $fmt_freeing_mem, %edx                # |
+    addl $18, %edx                             # |
+    insert_ascii_into_string2 %edx, %ecx, %ebx # |
+    print $fmt_freeing_mem, $28                # | print debug msg
+
+  skip_print_malloca_free:
+    movl -4(%ebp), %ebx                        # |
+    movb (%ebx), %al                           # |
+    cmpb $0, %al                               # |
+    je already_freed                           # | if already freed, print err and abort
+
+    movl (head), %ebx                          # |
+    cmpl %ebx, (tail)                          # |
+    je reset_brk_and_leave                     # | checking if heap has only 1 chunk
+
+    movl -4(%ebp), %ebx                        # |
+    movb $0, (%ebx)                            # | set chunk as free
+
+    push %ebx
+    call remove_chunk
+    addl $4, %esp
     jmp malloca_free_end
 
+
+  reset_brk_and_leave:
+    reset_brk
+
+  malloca_free_end:
     call print_brk_head_tail
     call print_chunk_list
+    movl %ebp, %esp
     popad
     ret
 
