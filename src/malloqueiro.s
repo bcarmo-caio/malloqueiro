@@ -298,12 +298,12 @@ print_chunk_list: # no parameter, 2 4bytes var, no return value
     je format_free                             # | get if chunk is free or in use
 
     movb $0x55, (%edx)                         # not free, U = 0x55
-    jmp next_chunk
+    jmp print_next_chunk
 
   format_free:
     movb $0x46, (%edx)                         # free, F = 0x46
 
-  next_chunk:
+  print_next_chunk:
     print $fmt_chunk_info $81                  # print string with current chunk info
 
     movl -4(%ebp), %eax                        # |
@@ -654,11 +654,36 @@ malloca_init: # no arguments, no local vars, no return value
   malloca_init_end:
     ret
 
-get_free_chunk: # 1 4b argument, no local var, pointer return value (may be null)
-    cmpl $0, head         #
-    je no_free_chunk      # if head is null, return null
+get_free_chunk: # 1 2bytes argument, no local var, pointer return value (may be null)
+    push %ebp
+    movl %esp, %ebp
+
+    mov (head), %eax      # we are going to iterate over chunk list using eax as current chunk
+    cmpl $0, head         # |
+    je no_free_chunk      # | if head is null, return null
+
+  get_free_chunk_loop:
+    movb (%eax), %cl  # |
+    cmpb $1, %cl      # |
+    je next_chunk     # | if this chunk is not free, continue loop with next one
+
+    movw 8(%ebp), %bx      # |
+    cmpw 5(%eax), %bx      # | if current chunk userspace size matches what user asked
+    je get_free_chunk_end  # | return current chunk
+
+  next_chunk:
+    cmpl $0, 1(%eax)     # |
+    je no_free_chunk     # | if current chunk is tail, end iteration. No free chunk
+
+    movl 1(%eax), %eax   # cur_chunk = cur_chunk->next
+    jmp get_free_chunk_loop
+
   no_free_chunk:  # no free chunk, return null
     movl $0, %eax
+
+  get_free_chunk_end:
+    movl %ebp, %esp
+    pop %ebp
     ret
 
 malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
@@ -683,14 +708,20 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     subl $0x0000ffff, %eax     # |
     jg too_much                # | assure user did not ask for a block greater than 0x0000ffff
 
-    push 28(%ebp)              # |
+    pushw 28(%ebp)             # |
     call get_free_chunk        # |
-    addl $4, %esp              # | get_free_chunk(size_t n_size)
+    addl $2, %esp              # | get_free_chunk(size_t n_size)
 
     cmpl $0, %eax              # |
-    jne malloca_end            # | if get_free_chunk could get a chunk, return it
-                               # | (head already exists at this point)
+    je malloca_no_free_chunk   # | if get_free_chunk could not get a chunk, increase brk
 
+    movb $1, (%eax)            # | else, set chunk as used,
+    addl (metadata_size), %eax # | adjust return value,
+    movl %eax, -4(%ebp)        # | store when this function will retrieve later
+    jmp malloca_end            # | and leave function
+
+
+  malloca_no_free_chunk:
     increase_brk 28(%ebp)      # increase brk by the ammount user wants (28 ebp) (plus metadata)
 
     movl %eax, %edx            # |
