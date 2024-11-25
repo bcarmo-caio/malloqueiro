@@ -113,7 +113,7 @@ int main(void) {
     /* ---------------------------------------------------------------------- */
 
     _malloca_free(ptr[0]);             /* [ F, U, U ] */
-    _malloca_free(ptr[1]);             /* [ F, U, ] */
+    _malloca_free(ptr[1]);             /* [ F, U ] */
 
     /* Initial brk should always have the same value */
     assert(get_initial_brk() == initial_brk);

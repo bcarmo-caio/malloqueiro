@@ -32,7 +32,7 @@ int main(void) {
     /* ---------------------------------------------------------------------- */
 
     _malloca_free(ptr[2]); /* [ U, U, F, U ] */
-    _malloca_free(ptr[1]); /* [ U, F, U, ] */
+    _malloca_free(ptr[1]); /* [ U, F, U ] */
 
     /* Validate head and data integrity */
     chunk = get_head();
@@ -67,7 +67,7 @@ int main(void) {
 
     /* Freeing memory before leaving test case
      * Already tested case when
-     *   [ U, F, U, ] -> [ F, U ] (merge prev, prev is head)
+     *   [ U, F, U ] -> [ F, U ] (merge prev, prev is head)
      *   [ F, U ] -> [ - ] */
 
     print_sep();

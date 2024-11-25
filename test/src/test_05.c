@@ -30,7 +30,7 @@ int main(void) {
     /* ---------------------------------------------------------------------- */
 
     _malloca_free(ptr[1]);             /* [ U, F, U ] */
-    _malloca_free(ptr[0]);             /* [ F, U, ] */
+    _malloca_free(ptr[0]);             /* [ F, U ] */
 
     /* Validate tail */
     tail = get_tail();
