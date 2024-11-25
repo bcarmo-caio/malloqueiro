@@ -63,8 +63,8 @@ str_new_line: .string "\n"
 str_printing_list: .string "Printing chunk list\n"
 str_list_is_empty: .string "Chunk list is empty\n\n"
 str_end_list: .string "End of chunk list\n\n"
-metadata_size: .byte 8
 debug_enabled: .byte 0
+metadata_size: .long 8
 
 .section .data
 initial_brk: .long 0 # null
