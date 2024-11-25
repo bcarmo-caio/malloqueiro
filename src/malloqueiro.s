@@ -644,13 +644,13 @@ malloca_init: # no arguments, no local vars, no return value
     jmp malloca_init_end
   malloca_init_proceed:
     get_cur_brk
-    movl %eax, (initial_brk)    # save initial brk value to initial_brk variable
-    movl %eax, %edx
-    call bytes2ascii
-    push %ecx
-    push %ebx
-    call print_initial_brk_addr
-    addl $8, %esp
+    movl %eax, (initial_brk)     # save initial brk value to initial_brk variable
+    movl %eax, %edx              # |
+    call bytes2ascii             # |
+    push %ecx                    # |
+    push %ebx                    # |
+    call print_initial_brk_addr  # |
+    addl $8, %esp                # | print initial brk address
   malloca_init_end:
     ret
 
@@ -658,24 +658,31 @@ get_free_chunk: # 1 2bytes argument, no local var, pointer return value (may be 
     push %ebp
     movl %esp, %ebp
 
-    mov (head), %eax      # we are going to iterate over chunk list using eax as current chunk
-    cmpl $0, head         # |
-    je no_free_chunk      # | if head is null, return null
+    mov (head), %eax           # we are going to iterate over chunk list using eax as current chunk
+    cmpl $0, head              # |
+    je no_free_chunk           # | if head is null, return null
 
   get_free_chunk_loop:
-    movb (%eax), %cl  # |
-    cmpb $1, %cl      # |
-    je next_chunk     # | if this chunk is not free, continue loop with next one
+    movb (%eax), %cl           # |
+    cmpb $1, %cl               # |
+    je next_chunk              # | if this chunk is not free, continue loop with next one
 
-    movw 8(%ebp), %bx      # |
-    cmpw 5(%eax), %bx      # | if current chunk userspace size matches what user asked
-    je get_free_chunk_end  # | return current chunk
+    movw 8(%ebp), %bx          # |
+    cmpw %bx, 5(%eax)          # | if current chunk userspace size matches what user asked
+    je get_free_chunk_end      # | return current chunk
+    jl next_chunk              # if it is smaller, continue to next chunk
+
+    # TODO: Overflow?
+    addw $1, %bx               # |
+    addw (metadata_size), %bx  # | if current chunk size is less then or equal to
+    cmpw %bx, 5(%eax)          # | desired size + (metadata_size + 1),
+    jle get_free_chunk_end     # | return it, we cannot split it into 2 chunks.
 
   next_chunk:
-    cmpl $0, 1(%eax)     # |
-    je no_free_chunk     # | if current chunk is tail, end iteration. No free chunk
+    cmpl $0, 1(%eax)           # |
+    je no_free_chunk           # | if current chunk is tail, end iteration. No free chunk
 
-    movl 1(%eax), %eax   # cur_chunk = cur_chunk->next
+    movl 1(%eax), %eax         # cur_chunk = cur_chunk->next
     jmp get_free_chunk_loop
 
   no_free_chunk:  # no free chunk, return null
@@ -691,8 +698,8 @@ malloca: # 1 4b argument, 1 4b local var, pointer return value (may be null)
     movl %esp, %ebp           # | init frame pointer
     subl $4, %esp             # value to be returned
 
-    cmpl $0, initial_brk # |
-    jne  initialized     # | if initial_brk is variable 0, init. Proceed otherwise
+    cmpl $0, initial_brk      # |
+    jne  initialized          # | if initial_brk is variable 0, init. Proceed otherwise
     call malloca_init
 
   initialized:
