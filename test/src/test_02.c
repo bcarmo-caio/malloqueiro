@@ -9,6 +9,7 @@ int main(void) {
     chunk_t *chunk = NULL;
 
     assert(sizeof(chunk_t) == 8); /* validate our __packed__ is being respected lol */
+    print_sep();
 
     /* Test case
      * Allocate 2 chunks and free the tail of the list.
@@ -52,6 +53,7 @@ int main(void) {
 
     /* Freeing memory before leaving test case
      * Already tested case when [ U ] -> [ - ] */
+
     print_sep();
     _malloca_free(ptr[0]); /* [ - ] */
     print_sep();

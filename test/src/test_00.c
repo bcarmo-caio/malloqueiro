@@ -9,6 +9,7 @@ int main(void) {
     chunk_t *chunk = NULL;
 
     assert(sizeof(chunk_t) == 8); /* validate our __packed__ is being respected lol */
+    print_sep();
 
     /* Test case:
      * Allocate 1 chunk and then free it. This should reset brk */
@@ -37,7 +38,9 @@ int main(void) {
 
     /* ---------------------------------------------------------------------- */
 
+    print_sep();
     _malloca_free(ptr[0]); /* [ - ] */
+    print_sep();
 
     /* Validate everything got reset */
     assert(get_initial_brk() == initial_brk);

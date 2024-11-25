@@ -11,6 +11,7 @@ int main(void) {
     uint16_t offset = 0;
 
     assert(sizeof(chunk_t) == 8); /* validate our __packed__ is being respected lol */
+    print_sep();
 
     /* Test case:
      * Merge with previous and previous is head.
@@ -150,6 +151,7 @@ int main(void) {
 
     /* Freeing memory before leaving test case
      * Already tested case when [ U ] -> [ - ] */
+
     print_sep();
     _malloca_free(ptr[2]); /* [ - ] */
     print_sep();

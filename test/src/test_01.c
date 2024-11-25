@@ -9,6 +9,7 @@ int main(void) {
     chunk_t *chunk = NULL;
 
     assert(sizeof(chunk_t) == 8); /* validate our __packed__ is being respected lol */
+    print_sep();
 
     /* Test case:
      * Allocate 2 chunks, free the first and then the second one.
@@ -90,7 +91,9 @@ int main(void) {
     /* ---------------------------------------------------------------------- */
 
     /* Freeing memory before leaving test case */
+    print_sep();
     _malloca_free(ptr[1]); /* [ - ] */
+    print_sep();
 
     /* Initial brk should always have the same value */
     assert(get_initial_brk() == initial_brk);

@@ -12,6 +12,7 @@ int main(void) {
      * what user asked for previous pointer +
      *           (what asked for current pointer + metadata)
      */
+    print_sep();
 
     _malloca(ptr, 0, 1);    /* [ U ] */
     _malloca(ptr, 1, 2);    /* [ U, U ] */
@@ -55,6 +56,7 @@ int main(void) {
 
     /* Freeing memory before leaving test case
      * Already tested case when [ F, U ] -> [ - ] */
+
     print_sep();
     _malloca_free(ptr[2]); /* [ - ] */
     print_sep();

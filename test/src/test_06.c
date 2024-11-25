@@ -15,6 +15,8 @@ int main(void) {
      *           (what asked for current pointer + metadata)
      */
 
+    print_sep();
+
     _malloca(ptr, 0, 1); /* [ U ] */
     _malloca(ptr, 1, 2); /* [ U, U ] */
     _malloca(ptr, 2, 3); /* [ U, U, U ] */
