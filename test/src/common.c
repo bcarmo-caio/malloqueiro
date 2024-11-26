@@ -1,5 +1,8 @@
 #include "../include/common.h"
 
+void *malloca(size_t bytes); /* bytes must be <= 0x0000FFFF*/
+void malloca_free(void *ptr);
+
 void print_sep(void) {
     if (!DEBUG_ENABLED) { return; }
 

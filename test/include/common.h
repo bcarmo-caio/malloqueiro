@@ -30,9 +30,6 @@
  */
 
 /* START Function exported by malloqueiro.s */
-void *malloca(size_t bytes); /* bytes must be <= 0x0000FFFF*/
-void malloca_free(void *ptr);
-
 __attribute_maybe_unused__ void breakpoint(void);
 void *get_initial_brk(void);
 void *get_head(void);
