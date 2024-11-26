@@ -64,4 +64,4 @@ clean:
 	@rm -rf bin/ lib/
 	@mkdir bin lib
 
-.PHONY: all run_tests debug clean
+.PHONY: all run_tests run_single_test debug clean
