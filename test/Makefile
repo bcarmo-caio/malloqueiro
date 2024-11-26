@@ -36,22 +36,22 @@ $(NO_MALLOC_FREE_LIB):
 	@$(CC) $(CFLAGS) -shared -fPIC src/no_malloc_free_x86.c -o lib/$(NO_MALLOC_FREE_LIB)
 
 run_tests:
-	@t=test_00; ./bin/$$t && echo "$$t: ok"
-	@t=test_01; ./bin/$$t && echo "$$t: ok"
-	@t=test_02; ./bin/$$t && echo "$$t: ok"
-	@t=test_03; ./bin/$$t && echo "$$t: ok"
-	@t=test_04; ./bin/$$t && echo "$$t: ok"
-	@t=test_05; ./bin/$$t && echo "$$t: ok"
-	@t=test_06; ./bin/$$t && echo "$$t: ok"
-	@t=test_07; ./bin/$$t && echo "$$t: ok"
-	@t=test_08; ./bin/$$t && echo "$$t: ok"
-	@t=test_09; ./bin/$$t && echo "$$t: ok"
-	@t=test_10; ./bin/$$t && echo "$$t: ok"
-	@t=test_11; ./bin/$$t && echo "$$t: ok"
-	@t=test_12; ./bin/$$t && echo "$$t: ok"
+	@t=test_00; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_01; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_02; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_03; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_04; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_05; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_06; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_07; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_08; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_09; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_10; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_11; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
+	@t=test_12; LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$$t && echo "$$t: ok"
 
 run_single_test:
-	@./bin/$(TEST) && echo "$(TEST): ok"
+	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) ./bin/$(TEST) && echo "$(TEST): ok"
 
 debug:
 	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) gdb bin/$(TEST)
