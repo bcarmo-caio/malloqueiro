@@ -1,13 +1,13 @@
 CC=gcc
 CFLAGS=\
--Wall \
--Wextra \
--Werror \
--std=gnu11 \
--pedantic \
--no-pie \
--m32 \
--O0
+	-Wall \
+	-Wextra \
+	-Werror \
+	-std=gnu11 \
+	-pedantic \
+	-no-pie \
+	-m32 \
+	-O0
 
 NO_MALLOC_FREE_LIB=no_malloc_free_x86.so
 NO_MALLOC_FREE_TEST_X86=test_no_malloc_free_x86
