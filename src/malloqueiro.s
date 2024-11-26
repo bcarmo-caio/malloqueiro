@@ -654,6 +654,63 @@ malloca_init: # no arguments, no local vars, no return value
   malloca_init_end:
     ret
 
+# 1 4bytes argument (chunk: chunk memory address)
+# 1 2bytes argument (bytes: user wanted space)
+# No local var
+# No return value
+split_chunk: # f(chunk, bytes)
+    #            Before
+    # +===========================+
+    # |            N              |
+    # |          BYTES            |
+    # |           ...             |
+    # |---------------------------|
+    # |         METADATA          |
+    # |           SIZE            |
+    # +===========================+
+    #
+    #             After
+    # +===========================+
+    # |  N - (M + METADATA SIZE)  | \
+    # |          BYTES            |  |
+    # |---------------------------|  |  Chunk B
+    # |         METADATA          |  |
+    # |           SIZE            | /
+    # |===========================|
+    # |             M             | \
+    # |           BYTES           |  |
+    # |---------------------------|  |  Chunk A (returned one)
+    # |         METADATA          |  |
+    # |           SIZE            | /
+    # +===========================+
+    push %ebp
+    movl %esp, %ebp
+
+    movl 8(%ebp), %ebx          # put chunk in ebx (chunk_A base)
+    movl %ebx, %eax             # put chunk in eax (chunk_A base)
+
+    addl (metadata_size), %ebx  # |
+    xorl %ecx, %ecx             # |
+    movw 12(%ebp), %cx          # |
+    addl %ecx, %ebx             # ebx now points to chunk_B (chunk_A + metadata_size + M)
+
+    movw 5(%eax), %dx           # dx = N
+    subw 12(%ebp), %dx          # dx = N - M
+    subw (metadata_size), %dx   # dx = N - M - metadata_size
+
+    movb $0, (%ebx)             # chunk_B->used = 0
+    movl 1(%eax), %esi          # put chunk_A->next in esi
+    movl %esi, 1(%ebx)          # chunk_B->next = chunk_A->next
+    movw %dx, 5(%ebx)           # chunk_B->size = N - M - metadata_size
+
+    movb $1, (%eax)             # chunk_A->used = 1
+    movl %ebx, 1(%eax)          # chunk_A->next = chunk_B
+    movw %cx, 5(%eax)           # chunk_A->size = M
+
+    movl %ebp, %esp
+    pop %ebp
+    ret
+
 get_free_chunk: # 1 2bytes argument, no local var, pointer return value (may be null)
     push %ebp
     movl %esp, %ebp
@@ -667,16 +724,27 @@ get_free_chunk: # 1 2bytes argument, no local var, pointer return value (may be 
     cmpb $1, %cl               # |
     je next_chunk              # | if this chunk is not free, continue loop with next one
 
+    # current chunk userspace <= user asked
     movw 8(%ebp), %bx          # |
     cmpw %bx, 5(%eax)          # | if current chunk userspace size matches what user asked
     je get_free_chunk_end      # | return current chunk
     jl next_chunk              # if it is smaller, continue to next chunk
 
+    # current chunk userspace > user asked
     # TODO: Overflow?
     addw $1, %bx               # |
-    addw (metadata_size), %bx  # | if current chunk size is less then or equal to
-    cmpw %bx, 5(%eax)          # | desired size + (metadata_size + 1),
-    jle get_free_chunk_end     # | return it, we cannot split it into 2 chunks.
+    addw (metadata_size), %bx  # |
+    cmpw %bx, 5(%eax)          # | current chunk userspace size < desired size + (metadata_size + 1)
+    jl get_free_chunk_end      # | return it, we cannot split it into 2 chunks.
+
+    # current chunk userspace size >= desired size + (metadata_size + 1)
+    # we can split this chunk into 2
+    pushw 8(%ebp)              # push 2bytes argument: desired size
+    push %eax                  # push 4bytes argument: chunk address
+    call split_chunk           #
+    pop %eax                   # restore eax to return it
+    addl $2, %esp              # clean stack
+    jmp get_free_chunk_end     # return eax
 
   next_chunk:
     cmpl $0, 1(%eax)           # |

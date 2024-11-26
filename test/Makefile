@@ -24,7 +24,8 @@ TESTS=\
 	test_08 \
 	test_09 \
 	test_10 \
-	test_11
+	test_11 \
+	test_12
 
 all: $(NO_MALLOC_FREE_LIB) $(TESTS)
 
@@ -47,6 +48,10 @@ run_tests:
 	@t=test_09; ./bin/$$t && echo "$$t: ok"
 	@t=test_10; ./bin/$$t && echo "$$t: ok"
 	@t=test_11; ./bin/$$t && echo "$$t: ok"
+	@t=test_12; ./bin/$$t && echo "$$t: ok"
+
+run_single_test:
+	@./bin/$(TEST) && echo "$(TEST): ok"
 
 debug:
 	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) gdb bin/$(TEST_TO_DEBUG)
