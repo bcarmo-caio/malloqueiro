@@ -54,7 +54,7 @@ run_single_test:
 	@./bin/$(TEST) && echo "$(TEST): ok"
 
 debug:
-	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) gdb bin/$(TEST_TO_DEBUG)
+	@LD_PRELOAD=lib/$(NO_MALLOC_FREE_LIB) gdb bin/$(TEST)
 
 test_no_malloc_free_x86:
 	@$(CC) $(CFLAGS) src/test_no_malloc_free.c -o bin/test_no_malloc_free_x86
