@@ -3,7 +3,7 @@ CFLAGS=\
 	-Wall \
 	-Wextra \
 	-Werror \
-	-std=gnu11 \
+	-ansi \
 	-pedantic \
 	-no-pie \
 	-m32 \
